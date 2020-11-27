@@ -139,45 +139,49 @@ Mesh* Loader::load_stl()
 
 Mesh* Loader::read_stl_binary(QFile& file)
 {
-    QDataStream data(&file);
-    data.setByteOrder(QDataStream::LittleEndian);
-    data.setFloatingPointPrecision(QDataStream::SinglePrecision);
+    for(int retry = 0; retry <=1000 ; retry ++) {
+	    QDataStream data(&file);
+	    data.setByteOrder(QDataStream::LittleEndian);
+	    data.setFloatingPointPrecision(QDataStream::SinglePrecision);
 
-    // Load the triangle count from the .stl file
-    file.seek(80);
-    uint32_t tri_count;
-    data >> tri_count;
+	    // Load the triangle count from the .stl file
+	    file.seek(80);
+	    uint32_t tri_count;
+	    data >> tri_count;
 
-    // Verify that the file is the right size
-    if (file.size() != 84 + tri_count*50)
-    {
-        emit error_bad_stl();
-        return NULL;
-    }
+	    // Verify that the file is the right size
+	    if (file.size() != 84 + tri_count*50)
+	    {
+	    	usleep(1000);
+	    	continue;
+	    }
 
-    // Extract vertices into an array of xyz, unsigned pairs
-    QVector<Vertex> verts(tri_count*3);
+	    // Extract vertices into an array of xyz, unsigned pairs
+	    QVector<Vertex> verts(tri_count*3);
 
-    // Dummy array, because readRawData is faster than skipRawData
-    std::unique_ptr<uint8_t> buffer(new uint8_t[tri_count * 50]);
-    data.readRawData((char*)buffer.get(), tri_count * 50);
+	    // Dummy array, because readRawData is faster than skipRawData
+	    std::unique_ptr<uint8_t> buffer(new uint8_t[tri_count * 50]);
+	    data.readRawData((char*)buffer.get(), tri_count * 50);
 
-    // Store vertices in the array, processing one triangle at a time.
-    auto b = buffer.get() + 3 * sizeof(float);
-    for (auto v=verts.begin(); v != verts.end(); v += 3)
-    {
-        // Load vertex data from .stl file into vertices
-        for (unsigned i=0; i < 3; ++i)
-        {
-            memcpy(&v[i], b, 3*sizeof(float));
-            b += 3 * sizeof(float);
-        }
+	    // Store vertices in the array, processing one triangle at a time.
+	    auto b = buffer.get() + 3 * sizeof(float);
+	    for (auto v=verts.begin(); v != verts.end(); v += 3)
+	    {
+		// Load vertex data from .stl file into vertices
+		for (unsigned i=0; i < 3; ++i)
+		{
+		    memcpy(&v[i], b, 3*sizeof(float));
+		    b += 3 * sizeof(float);
+		}
 
-        // Skip face attribute and next face's normal vector
-        b += 3 * sizeof(float) + sizeof(uint16_t);
-    }
+		// Skip face attribute and next face's normal vector
+		b += 3 * sizeof(float) + sizeof(uint16_t);
+	    }
 
-    return mesh_from_verts(tri_count, verts);
+	    return mesh_from_verts(tri_count, verts);
+	}
+	emit error_bad_stl();
+	return NULL;
 }
 
 Mesh* Loader::read_stl_ascii(QFile& file)
