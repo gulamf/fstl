@@ -1,3 +1,7 @@
+#GF Changes
+Added 1 seconds or retry when opening binary stl file.
+This avoids the auto reload erroring when stl file is updated in background.
+
 # fstl
 
 `fstl` is a very fast [.stl file](http://en.wikipedia.org/wiki/STL_\(file_format\)) viewer.
